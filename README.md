@@ -101,7 +101,7 @@ In practice, that means three things if you pick this package:
 | Telescope                       | 5.x                  |
 | MongoDB server                  | 6.0+                 |
 | `mongodb/laravel-mongodb`       | 5.x                  |
-| `ext-mongodb`                   | 1.18+ or 2.x         |
+| `ext-mongodb`                   | 1.21+ or 2.x         |
 
 ## Installation
 

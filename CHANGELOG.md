@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-25
+
+### Fixed
+- Lower bound on `ext-mongodb` and `mongodb/mongodb` bumped from
+  `^1.18` to `^1.21` to match what `mongodb/laravel-mongodb 5.x`
+  actually requires. Previous declared minimums would have failed
+  resolution under `composer install --prefer-lowest` (the constraint
+  was effectively dead weight — Composer was always converging to 1.21+
+  through the transitive Laravel package).
+- README Requirements table updated accordingly.
+
 ## [1.1.0] - 2026-05-25
 
 ### Added
@@ -93,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cases without a live database.
 - GitHub Actions workflow matrix for PHP 8.3 / 8.4 and Laravel 11 / 12 / 13.
 
-[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/webrek/laravel-telescope-mongodb/releases/tag/v1.0.0
