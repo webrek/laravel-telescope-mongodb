@@ -3,13 +3,15 @@
 namespace TelescopeMongoDB\Driver\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 
 class InstallCommand extends Command
 {
     protected $signature = 'telescope-mongodb:install
                             {--force : Overwrite existing config files}
                             {--skip-telescope : Do not publish Telescope assets}
-                            {--skip-indexes : Do not create MongoDB indexes}';
+                            {--skip-indexes : Do not create MongoDB indexes}
+                            {--keep-sql-migrations : Do not delete the relational migration files published by Telescope}';
 
     protected $description = 'Install the MongoDB driver for Laravel Telescope.';
 
@@ -21,6 +23,10 @@ class InstallCommand extends Command
 
         if (! $this->option('skip-telescope')) {
             $this->publishTelescopeAssets();
+
+            if (! $this->option('keep-sql-migrations')) {
+                $this->removeSqlMigrations();
+            }
         }
 
         if (! $this->option('skip-indexes')) {
@@ -28,7 +34,7 @@ class InstallCommand extends Command
         }
 
         $this->newLine();
-        $this->components->info('Done. Set TELESCOPE_DRIVER=mongodb is not required — the driver replaces the Eloquent storage automatically.');
+        $this->components->info('Done. The MongoDB driver has replaced the default Eloquent storage.');
         $this->line('  Review <fg=cyan>config/telescope-mongodb.php</> to adjust the connection or collection names.');
 
         return self::SUCCESS;
@@ -55,5 +61,27 @@ class InstallCommand extends Command
 
         $this->call('telescope:install');
         $this->call('vendor:publish', $params);
+    }
+
+    protected function removeSqlMigrations(): void
+    {
+        $directory = database_path('migrations');
+
+        if (! File::isDirectory($directory)) {
+            return;
+        }
+
+        $removed = 0;
+
+        foreach (File::files($directory) as $file) {
+            if (preg_match('/_(create|update)_telescope_(entries|monitoring)/', $file->getFilename()) === 1) {
+                File::delete($file->getPathname());
+                $removed++;
+            }
+        }
+
+        if ($removed > 0) {
+            $this->components->task(sprintf('Removed %d unused Telescope SQL migration(s)', $removed), fn () => true);
+        }
     }
 }

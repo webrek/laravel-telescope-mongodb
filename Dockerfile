@@ -4,10 +4,21 @@ RUN apk add --no-cache \
         git \
         unzip \
         bash \
+        curl \
         openssl-dev \
+        libzip-dev \
+        icu-dev \
+        oniguruma-dev \
+        sqlite-dev \
         $PHPIZE_DEPS \
     && pecl install mongodb \
     && docker-php-ext-enable mongodb \
+    && docker-php-ext-install \
+        bcmath \
+        intl \
+        zip \
+        pdo_sqlite \
+        opcache \
     && apk del $PHPIZE_DEPS \
     && rm -rf /tmp/* /var/cache/apk/*
 

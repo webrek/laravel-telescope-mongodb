@@ -48,6 +48,25 @@ shell: ## Open an interactive shell in the PHP container
 mongo-shell: ## Open a mongosh shell against the test database
 	$(COMPOSE) exec mongo mongosh telescope_mongodb_ci
 
+.PHONY: playground
+playground: ## Bootstrap a fresh Laravel app under playground/ that uses this package
+	$(RUN) bash scripts/bootstrap-playground.sh
+
+.PHONY: playground-up
+playground-up: ## Start the playground Laravel app on http://127.0.0.1:8000
+	$(COMPOSE) up -d laravel
+	@echo "Playground at http://127.0.0.1:8000 — Telescope at http://127.0.0.1:8000/telescope"
+
+.PHONY: playground-down
+playground-down: ## Stop the playground Laravel app
+	$(COMPOSE) stop laravel
+
+.PHONY: playground-reset
+playground-reset: ## Stop the playground, delete it, and re-bootstrap from scratch
+	$(COMPOSE) stop laravel || true
+	$(RUN) rm -rf playground
+	$(MAKE) playground
+
 .PHONY: clean
 clean: ## Remove vendor/, cache, and stop containers
 	$(COMPOSE) down -v --remove-orphans

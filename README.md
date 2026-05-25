@@ -131,6 +131,25 @@ make mongo-shell # open a mongosh shell against the test database
 make clean       # tear everything down
 ```
 
+### End-to-end Laravel playground
+
+For an end-to-end smoke test against a real Laravel app, the repository also ships with a bootstrap script. It creates a fresh Laravel installation under `playground/`, wires this package via a Composer path repository, points it at the Mongo service, runs the installer, and seeds a handful of demo routes.
+
+```bash
+make build           # one-time
+make playground      # composer create-project + install package + install Telescope
+make playground-up   # boot php artisan serve on http://127.0.0.1:8000
+
+curl http://127.0.0.1:8000/ping
+curl http://127.0.0.1:8000/log-something
+curl http://127.0.0.1:8000/mongo-query
+curl http://127.0.0.1:8000/boom
+
+open http://127.0.0.1:8000/telescope
+```
+
+After a few requests, `make mongo-shell` followed by `use telescope_playground; db.telescope_entries.find()` shows the captured documents stored natively. `make playground-reset` tears it all down and rebuilds.
+
 If you prefer to run things on your host, point the suite at any reachable MongoDB instance:
 
 ```bash
