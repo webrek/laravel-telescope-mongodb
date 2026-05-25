@@ -8,6 +8,27 @@
 
 A drop-in MongoDB storage driver for [Laravel Telescope](https://laravel.com/docs/telescope). Run Telescope on a MongoDB-only stack without touching MySQL or PostgreSQL.
 
+## Quickstart
+
+```bash
+composer require webrek/laravel-telescope-mongodb
+php artisan telescope-mongodb:install
+```
+
+That's it. The installer publishes Telescope's assets, removes the
+relational migration Telescope ships (you do not need a SQL database),
+creates the seven MongoDB indexes the driver relies on, and binds itself
+to Telescope's `EntriesRepository`. Open `/telescope` and you will see
+your requests, exceptions, jobs, queries, mails, notifications and
+batches streaming straight from MongoDB.
+
+Already running Telescope on MySQL or PostgreSQL? Migrate your existing
+data in one command:
+
+```bash
+php artisan telescope-mongodb:migrate-from-sql --from=mysql
+```
+
 ## Why
 
 Telescope ships with an Eloquent-backed storage layer that relies on JSON columns, joins to a tag pivot table, and an auto-increment `sequence`. None of that maps cleanly onto MongoDB, which is why Telescope has historically required a relational database alongside your Mongo workload.

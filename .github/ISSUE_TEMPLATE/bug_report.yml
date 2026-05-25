@@ -1,0 +1,96 @@
+name: Bug report
+description: Something is broken or behaves differently from the relational driver.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill in every
+        field — incomplete reports usually need a follow-up round-trip
+        before we can act on them.
+
+  - type: input
+    id: package-version
+    attributes:
+      label: Package version
+      description: Output of `composer show webrek/laravel-telescope-mongodb | grep versions`
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: laravel-version
+    attributes:
+      label: Laravel version
+      placeholder: "13.11.2"
+    validations:
+      required: true
+
+  - type: input
+    id: telescope-version
+    attributes:
+      label: Telescope version
+      placeholder: "5.20.0"
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: "8.3.31"
+    validations:
+      required: true
+
+  - type: input
+    id: mongo-version
+    attributes:
+      label: MongoDB server version
+      placeholder: "7.0.34"
+    validations:
+      required: true
+
+  - type: input
+    id: mongo-deployment
+    attributes:
+      label: MongoDB deployment
+      description: standalone, replica set, sharded, Atlas tier, etc.
+      placeholder: replica set (3 nodes)
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: The smallest sequence of actions that triggers the bug.
+      placeholder: |
+        1. `composer require ...`
+        2. `php artisan telescope-mongodb:install`
+        3. Hit GET /something
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include exception messages, stack traces, or relevant log lines.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Anything else
+      description: Custom configuration, schema validators, replica set lag, etc.
+    validations:
+      required: false

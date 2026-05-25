@@ -1,0 +1,42 @@
+name: Feature request
+description: Propose a new capability or improvement.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a feature request, please check the open issues
+        and the `CHANGELOG.md`'s `[Unreleased]` section to make sure
+        the work is not already in flight.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: A concrete situation, not the proposed solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What API, command, config flag, or behaviour should exist.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you tried, other packages, manual scripts.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Relevant deployment shape, scale, related Telescope issues, etc.
+    validations:
+      required: false
