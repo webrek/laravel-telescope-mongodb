@@ -35,6 +35,46 @@ Telescope ships with an Eloquent-backed storage layer that relies on JSON column
 
 This package implements Telescope's `EntriesRepository`, `ClearableRepository`, `PrunableRepository`, and `TerminableRepository` contracts directly against MongoDB. Tags live on the entry document as an array, the `_id` ObjectId acts as the monotonic sequence, and indexes are managed for you.
 
+## Why move Telescope off your primary database
+
+A common Telescope-in-production story: traffic grows, the dashboard starts feeling sluggish, and you notice MySQL is suddenly pinned at 60-80% CPU. The application queries did not change — Telescope is the new hot tenant on your primary database.
+
+Five mechanics make the default storage layer expensive on relational engines:
+
+1. **Write amplification.** A typical request produces 5–20+ Telescope entries: one `request`, a handful of `query`, one or two `view`, optionally `cache`, `mail`, `notification`, `job`, `exception`. Multiply by your request rate and your primary database is absorbing writes that have nothing to do with your business data.
+2. **Auto-increment contention.** Every insert into `telescope_entries` takes a row-level lock on the `sequence` `AUTO_INCREMENT`. Under concurrent traffic those inserts serialise against the same hot spot.
+3. **JSON column scans.** The `content` field is `LONGTEXT` holding JSON. MySQL does not index JSON natively, so dashboard filters fall back to full scans or `JSON_EXTRACT` calls that fight for the same buffer pool your application queries depend on.
+4. **Pivot writes.** Tags live in `telescope_entries_tags`. An entry with N tags is `1 + N` inserts, all of which take their own locks.
+5. **Buffer pool contention.** The Telescope working set evicts your application's hot pages out of InnoDB's buffer pool, slowing down the queries that actually matter.
+
+MongoDB removes each of these by construction:
+
+- **No central sequence.** `_id` is an `ObjectId` minted by the driver, monotonic but contention-free.
+- **Tags are an embedded array** with a native multikey index. One document, zero pivots.
+- **Document-level indexes on `type`, `tags`, `family_hash`, `batch_id`, `should_display_on_index`** — the dashboard's filters hit indexes directly.
+- **Separate database.** Telescope writes go to your Mongo server (or Atlas tier), not the SQL server that holds your real data — zero buffer-pool competition.
+- **Optional TTL index.** MongoDB removes expired entries server-side, continuously, with no `telescope:prune` cron required.
+
+### Benchmark: MySQL vs. MongoDB driver
+
+The repository ships with a reproducible benchmark (`make bench-setup && make bench`) that boots two identical Laravel 13 applications side by side — one writing through stock Telescope to MySQL 8, one writing through this driver to MongoDB 7. Same routes, same request count, same `php artisan serve` process, same host. Numbers below were captured on a Docker Desktop host (Apple Silicon) with both database containers and the load generator competing for the same CPU — directional, not absolute.
+
+| Workload                | Storage           | Throughput        | p50 latency  | p95 latency  | p99 latency  |
+| ----------------------- | ----------------- | ----------------- | ------------ | ------------ | ------------ |
+| 500 req × 10 concurrent | MongoDB driver    | **247.5 req/s**   | **33.9 ms**  | **39.5 ms**  | **41.8 ms**  |
+| 500 req × 10 concurrent | Stock MySQL       | 130.2 req/s       | 69.0 ms      | 79.4 ms      | 92.0 ms      |
+| 1000 req × 20 concurrent| MongoDB driver    | **262.9 req/s**   | **69.0 ms**  | **78.4 ms**  | **82.4 ms**  |
+| 1000 req × 20 concurrent| Stock MySQL       | 131.3 req/s       | 144.5 ms     | 160.1 ms     | 184.8 ms     |
+
+End-to-end the driver is **roughly 2× the throughput and 2× lower latency** of the stock MySQL backend on this workload. Production differences tend to be larger because in production your MySQL is also serving the application's own queries — the buffer-pool contention is real.
+
+Reproduce it yourself:
+
+```bash
+make bench-setup
+REQUESTS=1000 CONCURRENCY=20 make bench
+```
+
 ## How this compares to existing packages
 
 A few prior attempts exist on Packagist. They all take the same shape — a **complete fork** of `laravel/telescope` that re-vendors thousands of lines of PHP, Vue, JS and Blade so a handful of storage classes can be swapped. This package takes a different path: it ships a few hundred lines of storage code that implement Telescope's public contracts. Telescope itself is installed as a normal Composer dependency and updated by the Laravel team.

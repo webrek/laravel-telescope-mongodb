@@ -2,6 +2,7 @@
     "preset": "laravel",
     "exclude": [
         "playground",
+        "playground-mysql",
         "vendor"
     ],
     "rules": {

@@ -111,25 +111,13 @@ class MongoDbEntriesRepository implements ClearableRepository, Contract, Prunabl
 
         foreach ($updates as $update) {
             /** @var EntryUpdate $update */
-            $existing = $this->entries()->findOne(
-                ['uuid' => $update->uuid, 'type' => $update->type],
-                self::ARRAY_TYPE_MAP,
-            );
+            $set = [];
 
-            if ($existing === null) {
-                $failed->push($update);
-
-                continue;
+            foreach ($update->changes as $key => $value) {
+                $set['content.' . $key] = $value;
             }
 
-            $mergedContent = array_merge(
-                $existing['content'] ?? [],
-                $update->changes,
-            );
-
-            $set = ['content' => $mergedContent];
-
-            $operations = ['$set' => $set];
+            $operations = $set === [] ? [] : ['$set' => $set];
 
             if (! empty($update->tags)) {
                 $operations['$addToSet'] = [
@@ -137,10 +125,19 @@ class MongoDbEntriesRepository implements ClearableRepository, Contract, Prunabl
                 ];
             }
 
-            $this->entries()->updateOne(
+            if ($operations === []) {
+                continue;
+            }
+
+            $result = $this->entries()->findOneAndUpdate(
                 ['uuid' => $update->uuid, 'type' => $update->type],
                 $operations,
+                ['projection' => ['_id' => 1]],
             );
+
+            if ($result === null) {
+                $failed->push($update);
+            }
         }
 
         return $failed->isEmpty() ? null : $failed;
@@ -296,35 +293,78 @@ class MongoDbEntriesRepository implements ClearableRepository, Contract, Prunabl
             return;
         }
 
-        foreach ($exceptions as $exception) {
+        [$withHash, $withoutHash] = $exceptions->partition(
+            fn (IncomingEntry $entry) => (bool) $entry->familyHash(),
+        );
+
+        $operations = [];
+
+        foreach ($withoutHash as $exception) {
             /** @var IncomingEntry $exception */
-            $hash = $exception->familyHash();
-
-            $occurrences = 0;
-
-            if ($hash) {
-                $occurrences = $this->entries()->countDocuments([
-                    'type' => EntryType::EXCEPTION,
-                    'family_hash' => $hash,
-                ]);
-
-                $this->entries()->updateMany(
-                    [
-                        'type' => EntryType::EXCEPTION,
-                        'family_hash' => $hash,
-                        'should_display_on_index' => true,
-                    ],
-                    ['$set' => ['should_display_on_index' => false]],
-                );
-            }
-
             $document = $this->toDocument($exception);
-            $document['content'] = array_merge($document['content'], [
-                'occurrences' => $occurrences + 1,
-            ]);
-
-            $this->entries()->insertOne($document);
+            $document['content']['occurrences'] = 1;
+            $operations[] = ['insertOne' => [$document]];
         }
+
+        if ($withHash->isNotEmpty()) {
+            $byHash = $withHash->groupBy(fn (IncomingEntry $entry) => $entry->familyHash());
+            $existingCounts = $this->countExistingExceptionsByFamily(array_keys($byHash->all()));
+
+            foreach ($byHash as $hash => $group) {
+                /** @var Collection<int, IncomingEntry> $group */
+                $operations[] = [
+                    'updateMany' => [
+                        [
+                            'type' => EntryType::EXCEPTION,
+                            'family_hash' => $hash,
+                            'should_display_on_index' => true,
+                        ],
+                        ['$set' => ['should_display_on_index' => false]],
+                    ],
+                ];
+
+                $baseCount = $existingCounts[$hash] ?? 0;
+                $lastIndex = $group->count() - 1;
+
+                foreach ($group->values() as $i => $exception) {
+                    $document = $this->toDocument($exception);
+                    $document['content']['occurrences'] = $baseCount + $i + 1;
+                    $document['should_display_on_index'] = ($i === $lastIndex);
+                    $operations[] = ['insertOne' => [$document]];
+                }
+            }
+        }
+
+        if ($operations !== []) {
+            $this->entries()->bulkWrite($operations, ['ordered' => true]);
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $hashes
+     * @return array<string, int>
+     */
+    protected function countExistingExceptionsByFamily(array $hashes): array
+    {
+        if ($hashes === []) {
+            return [];
+        }
+
+        $cursor = $this->entries()->aggregate(
+            [
+                ['$match' => ['type' => EntryType::EXCEPTION, 'family_hash' => ['$in' => array_values($hashes)]]],
+                ['$group' => ['_id' => '$family_hash', 'n' => ['$sum' => 1]]],
+            ],
+            self::ARRAY_TYPE_MAP,
+        );
+
+        $counts = [];
+
+        foreach ($cursor as $row) {
+            $counts[(string) $row['_id']] = (int) $row['n'];
+        }
+
+        return $counts;
     }
 
     /**

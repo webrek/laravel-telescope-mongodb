@@ -18,6 +18,7 @@ RUN apk add --no-cache \
         intl \
         zip \
         pdo_sqlite \
+        pdo_mysql \
         opcache \
     && apk del $PHPIZE_DEPS \
     && rm -rf /tmp/* /var/cache/apk/*

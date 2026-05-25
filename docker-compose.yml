@@ -10,6 +10,23 @@ services:
       timeout: 5s
       retries: 12
 
+  mysql:
+    image: mysql:8
+    container_name: telescope-mongodb-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: telescope_bench
+      MYSQL_USER: telescope
+      MYSQL_PASSWORD: secret
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    profiles: ["bench"]
+
   php:
     build:
       context: .
@@ -43,6 +60,21 @@ services:
       mongo:
         condition: service_healthy
     command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+
+  laravel-mysql:
+    image: telescope-mongodb-php
+    container_name: telescope-mongodb-playground-mysql
+    working_dir: /package/playground-mysql
+    volumes:
+      - .:/package
+      - composer-cache:/root/.composer/cache
+    ports:
+      - "8001:8001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8001"]
+    profiles: ["bench"]
 
 volumes:
   composer-cache:

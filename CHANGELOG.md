@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-25
+
+### Added
+- README section "Why move Telescope off your primary database"
+  documenting the five MySQL contention mechanics (write amplification,
+  AUTO_INCREMENT row lock, JSON column scans, tag pivot writes, buffer
+  pool contention) and how MongoDB removes each one structurally.
+- Reproducible MySQL-vs-Mongo benchmark: `docker-compose.yml` ships
+  `mysql:8` and `laravel-mysql` services behind a `bench` profile,
+  `scripts/bootstrap-playground-mysql.sh` stands up a stock-Telescope
+  control group, and `scripts/bench.sh` runs identical traffic against
+  both backends and reports throughput plus p50/p95/p99.
+- `make bench-setup`, `make bench`, `make bench-down` targets so the
+  benchmark is one command end to end.
+- Published benchmark numbers in the README: on the reference workload
+  the driver delivers ~2× the throughput and ~50% lower p99 latency of
+  the stock MySQL backend.
+
+### Changed
+- `update()` now uses a single `findOneAndUpdate` per change with dot-
+  notation `content.<field>` updates instead of `findOne` + `updateOne`.
+  Halves the round-trips per terminate callback (jobs, scheduled tasks,
+  exceptions in the after-commit flow).
+- `storeExceptions()` issues a single `bulkWrite` per batch, replacing
+  the previous per-exception sequence of `countDocuments`, `updateMany`
+  and `insertOne`. Existing occurrence counts are now fetched in one
+  aggregation across all family hashes in the batch.
+
 ## [1.0.1] - 2026-05-25
 
 ### Added
@@ -65,6 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cases without a live database.
 - GitHub Actions workflow matrix for PHP 8.3 / 8.4 and Laravel 11 / 12 / 13.
 
-[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/webrek/laravel-telescope-mongodb/releases/tag/v1.0.0

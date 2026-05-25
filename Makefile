@@ -79,6 +79,21 @@ playground-reset: ## Stop the playground, delete it, and re-bootstrap from scrat
 	$(RUN) rm -rf playground
 	$(MAKE) playground
 
+.PHONY: bench-setup
+bench-setup: ## Bootstrap both playgrounds (Mongo + MySQL) for benchmarking
+	$(COMPOSE) --profile bench up -d mongo mysql
+	$(RUN) bash -c "[ -d playground ] || bash scripts/bootstrap-playground.sh"
+	$(RUN) bash -c "[ -d playground-mysql ] || bash scripts/bootstrap-playground-mysql.sh"
+	$(COMPOSE) --profile bench up -d laravel laravel-mysql
+
+.PHONY: bench
+bench: ## Run the side-by-side benchmark (REQUESTS and CONCURRENCY env vars supported)
+	bash scripts/bench.sh
+
+.PHONY: bench-down
+bench-down: ## Stop the benchmark containers (keeps the bootstrapped playgrounds)
+	$(COMPOSE) --profile bench down --remove-orphans
+
 .PHONY: clean
 clean: ## Remove vendor/, cache, and stop containers
 	$(COMPOSE) down -v --remove-orphans
