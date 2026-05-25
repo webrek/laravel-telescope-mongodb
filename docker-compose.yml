@@ -9,3 +9,26 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: telescope-mongodb-php
+    container_name: telescope-mongodb-php
+    working_dir: /package
+    volumes:
+      - .:/package
+      - composer-cache:/root/.composer/cache
+    environment:
+      TELESCOPE_MONGODB_TEST_DSN: mongodb://mongo:27017
+      TELESCOPE_MONGODB_TEST_DATABASE: telescope_mongodb_ci
+    depends_on:
+      mongo:
+        condition: service_healthy
+    tty: true
+    stdin_open: true
+    command: ["tail", "-f", "/dev/null"]
+
+volumes:
+  composer-cache:

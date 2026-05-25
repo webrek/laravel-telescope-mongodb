@@ -281,42 +281,61 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
             return;
         }
 
-        $exceptions->groupBy('familyHash')->each(function (Collection $group, string $hash): void {
-            if ($hash !== '') {
+        foreach ($exceptions as $exception) {
+            /** @var IncomingEntry $exception */
+            $hash = $exception->familyHash();
+
+            $occurrences = 0;
+
+            if ($hash) {
+                $occurrences = $this->entries()->countDocuments([
+                    'type' => EntryType::EXCEPTION,
+                    'family_hash' => $hash,
+                ]);
+
                 $this->entries()->updateMany(
-                    ['family_hash' => $hash],
+                    [
+                        'type' => EntryType::EXCEPTION,
+                        'family_hash' => $hash,
+                        'should_display_on_index' => true,
+                    ],
                     ['$set' => ['should_display_on_index' => false]],
                 );
             }
 
-            $this->entries()->insertMany(
-                $group->map(fn (IncomingEntry $entry) => $this->toDocument($entry))->values()->all(),
-            );
-        });
+            $document = $this->toDocument($exception);
+            $document['content'] = array_merge($document['content'], [
+                'occurrences' => $occurrences + 1,
+            ]);
+
+            $this->entries()->insertOne($document);
+        }
     }
 
     protected function toDocument(IncomingEntry $entry): array
     {
-        $createdAt = $entry->createdAt
-            ? Carbon::parse($entry->createdAt)
-            : Carbon::now();
+        $recordedAt = $entry->recordedAt ?? Carbon::now();
+
+        if (! $recordedAt instanceof Carbon) {
+            $recordedAt = Carbon::parse($recordedAt);
+        }
 
         return [
             '_id' => new ObjectId(),
             'uuid' => (string) $entry->uuid,
             'batch_id' => $entry->batchId,
-            'family_hash' => $entry->familyHash,
-            'should_display_on_index' => $entry->shouldDisplayOnIndex,
+            'family_hash' => $entry->familyHash(),
+            'should_display_on_index' => true,
             'type' => $entry->type,
             'content' => $entry->content,
             'tags' => array_values(array_unique($entry->tags)),
-            'created_at' => new UTCDateTime((int) ($createdAt->getTimestamp() * 1000)),
+            'created_at' => new UTCDateTime((int) ($recordedAt->getTimestamp() * 1000)),
         ];
     }
 
     protected function toEntryResult(array $document): EntryResult
     {
-        $id = isset($document['_id']) ? (string) $document['_id'] : null;
+        $sequence = isset($document['_id']) ? (string) $document['_id'] : null;
         $createdAt = $document['created_at'] ?? null;
 
         if ($createdAt instanceof UTCDateTime) {
@@ -326,10 +345,9 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
         }
 
         return new EntryResult(
-            $id,
-            $id,
             (string) ($document['uuid'] ?? ''),
-            $document['batch_id'] ?? null,
+            $sequence,
+            (string) ($document['batch_id'] ?? ''),
             (string) ($document['type'] ?? ''),
             $document['family_hash'] ?? null,
             (array) ($document['content'] ?? []),

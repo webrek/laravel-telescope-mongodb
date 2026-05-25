@@ -37,27 +37,39 @@ class MongoDbEntriesRepositoryTest extends TestCase
 
         $result = $this->repository->find($entry->uuid);
 
-        $this->assertSame($entry->uuid, $result->uuid);
+        $this->assertSame($entry->uuid, $result->id);
         $this->assertSame(EntryType::REQUEST, $result->type);
         $this->assertSame('/users', $result->content['uri']);
-        $this->assertSame(['status:200'], $result->tags);
+        $this->assertSame(['status:200'], $this->tagsOf($result));
     }
 
     public function test_it_filters_by_type_and_tag_and_excludes_hidden_entries(): void
     {
         $visible = $this->makeEntry(EntryType::REQUEST, ['uri' => '/visible'], ['env:prod']);
-        $hidden = $this->makeEntry(EntryType::REQUEST, ['uri' => '/hidden'], ['env:prod']);
-        $hidden->shouldDisplayOnIndex = false;
         $other = $this->makeEntry(EntryType::QUERY, ['sql' => 'select 1'], ['env:prod']);
 
-        $this->repository->store(Collection::make([$visible, $hidden, $other]));
+        $this->repository->store(Collection::make([$visible, $other]));
+
+        DB::connection(config('telescope-mongodb.connection'))
+            ->getDatabase()
+            ->selectCollection(config('telescope-mongodb.collections.entries'))
+            ->insertOne([
+                'uuid' => (string) Str::uuid(),
+                'batch_id' => null,
+                'family_hash' => null,
+                'should_display_on_index' => false,
+                'type' => EntryType::REQUEST,
+                'content' => ['uri' => '/hidden'],
+                'tags' => ['env:prod'],
+                'created_at' => new \MongoDB\BSON\UTCDateTime(),
+            ]);
 
         $options = (new EntryQueryOptions())->tag('env:prod')->limit(50);
 
         $results = $this->repository->get(EntryType::REQUEST, $options);
 
         $this->assertCount(1, $results);
-        $this->assertSame($visible->uuid, $results->first()->uuid);
+        $this->assertSame($visible->uuid, $results->first()->id);
     }
 
     public function test_it_paginates_with_before_sequence(): void
@@ -76,16 +88,13 @@ class MongoDbEntriesRepositoryTest extends TestCase
         );
 
         $this->assertCount(2, $next);
-        $this->assertNotEquals($first->pluck('uuid'), $next->pluck('uuid'));
+        $this->assertNotEquals($first->pluck('id'), $next->pluck('id'));
     }
 
     public function test_it_hides_previous_exceptions_with_same_family_hash(): void
     {
-        $first = $this->makeEntry(EntryType::EXCEPTION, ['class' => 'BoomException', 'message' => 'one']);
-        $first->familyHash = 'fam-1';
-
-        $second = $this->makeEntry(EntryType::EXCEPTION, ['class' => 'BoomException', 'message' => 'two']);
-        $second->familyHash = 'fam-1';
+        $first = $this->makeException(['class' => 'BoomException', 'message' => 'one'], 'fam-1');
+        $second = $this->makeException(['class' => 'BoomException', 'message' => 'two'], 'fam-1');
 
         $this->repository->store(Collection::make([$first]));
         $this->repository->store(Collection::make([$second]));
@@ -93,7 +102,8 @@ class MongoDbEntriesRepositoryTest extends TestCase
         $listing = $this->repository->get(EntryType::EXCEPTION, new EntryQueryOptions());
 
         $this->assertCount(1, $listing);
-        $this->assertSame($second->uuid, $listing->first()->uuid);
+        $this->assertSame($second->uuid, $listing->first()->id);
+        $this->assertSame(2, $listing->first()->content['occurrences']);
 
         $byFamily = $this->repository->get(
             EntryType::EXCEPTION,
@@ -119,7 +129,7 @@ class MongoDbEntriesRepositoryTest extends TestCase
 
         $this->assertSame(42, $result->content['duration']);
         $this->assertSame('/users', $result->content['uri']);
-        $this->assertContains('user:7', $result->tags);
+        $this->assertContains('user:7', $this->tagsOf($result));
     }
 
     public function test_update_returns_failed_when_entry_missing(): void
@@ -149,12 +159,12 @@ class MongoDbEntriesRepositoryTest extends TestCase
     public function test_prune_removes_old_entries_and_can_keep_exceptions(): void
     {
         $old = $this->makeEntry(EntryType::REQUEST, ['uri' => '/old']);
-        $old->createdAt = now()->subDays(10);
+        $old->recordedAt = now()->subDays(10);
 
         $recent = $this->makeEntry(EntryType::REQUEST, ['uri' => '/recent']);
 
         $oldException = $this->makeEntry(EntryType::EXCEPTION, ['class' => 'X']);
-        $oldException->createdAt = now()->subDays(10);
+        $oldException->recordedAt = now()->subDays(10);
 
         $this->repository->store(Collection::make([$old, $recent, $oldException]));
 
@@ -178,11 +188,40 @@ class MongoDbEntriesRepositoryTest extends TestCase
         $this->assertSame([], $this->repository->monitoring());
     }
 
+    protected function tagsOf(\Laravel\Telescope\EntryResult $result): array
+    {
+        return $result->jsonSerialize()['tags'] ?? [];
+    }
+
     protected function makeEntry(string $type, array $content, array $tags = []): IncomingEntry
     {
         $entry = IncomingEntry::make($content);
         $entry->type = $type;
         $entry->tags($tags);
+
+        return $entry;
+    }
+
+    protected function makeException(array $content, string $familyHash): IncomingEntry
+    {
+        $entry = new class($content, $familyHash) extends IncomingEntry
+        {
+            public function __construct(array $content, private readonly string $fixedFamilyHash)
+            {
+                parent::__construct($content);
+                $this->type = EntryType::EXCEPTION;
+            }
+
+            public function isException(): bool
+            {
+                return true;
+            }
+
+            public function familyHash(): string
+            {
+                return $this->fixedFamilyHash;
+            }
+        };
 
         return $entry;
     }
