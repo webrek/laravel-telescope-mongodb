@@ -1,0 +1,52 @@
+{
+    "name": "telescope-mongodb/driver",
+    "description": "Native MongoDB storage driver for Laravel Telescope.",
+    "keywords": [
+        "laravel",
+        "telescope",
+        "mongodb",
+        "debugging",
+        "logging"
+    ],
+    "license": "MIT",
+    "type": "library",
+    "require": {
+        "php": "^8.3",
+        "ext-mongodb": "^1.18 || ^2.0",
+        "illuminate/contracts": "^11.0 || ^12.0",
+        "illuminate/support": "^11.0 || ^12.0",
+        "laravel/telescope": "^5.0",
+        "mongodb/laravel-mongodb": "^5.0",
+        "mongodb/mongodb": "^1.18 || ^2.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0 || ^10.0",
+        "phpunit/phpunit": "^10.5 || ^11.0",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "TelescopeMongoDB\\Driver\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TelescopeMongoDB\\Driver\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "TelescopeMongoDB\\Driver\\TelescopeMongoDbServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

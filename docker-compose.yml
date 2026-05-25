@@ -1,0 +1,11 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: telescope-mongodb-test
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12

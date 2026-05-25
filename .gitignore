@@ -1,0 +1,12 @@
+/vendor/
+/node_modules/
+.phpunit.result.cache
+.phpunit.cache/
+composer.lock
+.DS_Store
+.idea/
+.vscode/
+phpunit.xml.bak
+coverage/
+.env
+.env.testing
