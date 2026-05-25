@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-25
+
+### Changed
+- Maintainer identity normalised across the package and the git history
+  to `Victor Hernandez <victor@arturohernandez.com.mx>` (the canonical
+  contact for this project). `composer.json` author block updated and
+  the historical commits / annotated tags were rewritten via
+  `git filter-repo` so every reference is consistent.
+
 ## [1.1.1] - 2026-05-25
 
 ### Fixed
@@ -104,7 +113,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cases without a live database.
 - GitHub Actions workflow matrix for PHP 8.3 / 8.4 and Laravel 11 / 12 / 13.
 
-[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.0...v1.0.1
