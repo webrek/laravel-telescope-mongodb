@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-25
+
+### Added
+- Comparison table in the README documenting how this package differs
+  from the existing `dij-digital/telescope-mongodb`,
+  `farmani/telescope-mongodb` and `yektadg/laravel-telescope-mongodb`
+  forks (all of which re-vendor Telescope itself).
+- Production checklist covering authorization gate, TTL vs cron-driven
+  retention, write concern presets per deployment shape, the doctor
+  command as a post-deploy gate, and sharding guidance for very large
+  collections.
+
+### Changed
+- Expanded `composer.json` metadata: keyword list now mirrors the
+  GitHub topics, plus a `support` block (issues / source / security),
+  `homepage`, `authors`, and Composer scripts so contributors can run
+  `composer test`, `composer stan`, `composer pint` without going
+  through the Makefile.
+- Tightened the Requirements table in the README to reflect the
+  Laravel 13 support already shipped in 1.0.0.
+
+## [1.0.0] - 2026-05-25
+
 ### Added
 - Native MongoDB storage driver implementing Telescope's `EntriesRepository`,
   `ClearableRepository`, `PrunableRepository` and `TerminableRepository`
@@ -42,4 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cases without a live database.
 - GitHub Actions workflow matrix for PHP 8.3 / 8.4 and Laravel 11 / 12 / 13.
 
-[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/HEAD...HEAD
+[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/webrek/laravel-telescope-mongodb/releases/tag/v1.0.0

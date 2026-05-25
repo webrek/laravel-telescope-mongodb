@@ -3,13 +3,30 @@
     "description": "Native MongoDB storage driver for Laravel Telescope.",
     "keywords": [
         "laravel",
+        "laravel-package",
+        "laravel-telescope",
         "telescope",
         "mongodb",
+        "mongodb-driver",
+        "observability",
         "debugging",
+        "apm",
         "logging"
     ],
+    "homepage": "https://github.com/webrek/laravel-telescope-mongodb",
     "license": "MIT",
     "type": "library",
+    "authors": [
+        {
+            "name": "Victor Hernandez",
+            "email": "victor@arturohernandez.com.mx"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/webrek/laravel-telescope-mongodb/issues",
+        "source": "https://github.com/webrek/laravel-telescope-mongodb",
+        "security": "https://github.com/webrek/laravel-telescope-mongodb/security/advisories/new"
+    },
     "require": {
         "php": "^8.3",
         "ext-mongodb": "^1.18 || ^2.0",
@@ -20,12 +37,12 @@
         "mongodb/mongodb": "^1.18 || ^2.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
-        "phpunit/phpunit": "^10.5 || ^11.0",
-        "mockery/mockery": "^1.6",
-        "laravel/pint": "^1.18",
         "larastan/larastan": "^3.0",
-        "phpstan/phpstan": "^2.0"
+        "laravel/pint": "^1.18",
+        "mockery/mockery": "^1.6",
+        "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^10.5 || ^11.0"
     },
     "autoload": {
         "psr-4": {
@@ -43,6 +60,12 @@
                 "TelescopeMongoDB\\Driver\\TelescopeMongoDbServiceProvider"
             ]
         }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "stan": "phpstan analyse --memory-limit=512M",
+        "pint": "pint",
+        "pint:check": "pint --test"
     },
     "config": {
         "sort-packages": true,

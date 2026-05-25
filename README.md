@@ -35,16 +35,33 @@ Telescope ships with an Eloquent-backed storage layer that relies on JSON column
 
 This package implements Telescope's `EntriesRepository`, `ClearableRepository`, `PrunableRepository`, and `TerminableRepository` contracts directly against MongoDB. Tags live on the entry document as an array, the `_id` ObjectId acts as the monotonic sequence, and indexes are managed for you.
 
+## How this compares to existing packages
+
+A few prior attempts exist on Packagist. They all take the same shape — a **complete fork** of `laravel/telescope` that re-vendors thousands of lines of PHP, Vue, JS and Blade so a handful of storage classes can be swapped. This package takes a different path: it ships a few hundred lines of storage code that implement Telescope's public contracts. Telescope itself is installed as a normal Composer dependency and updated by the Laravel team.
+
+| Package | Approach | Latest Laravel | Maintenance shape |
+| --- | --- | --- | --- |
+| `webrek/laravel-telescope-mongodb` (this one) | Driver implementing the four Telescope contracts | 11 / 12 / 13 | Track upstream by bumping `laravel/telescope` |
+| `dij-digital/telescope-mongodb` | Full fork of Telescope itself (~2k commits ahead of upstream) | 11 / 12 | Rebase or merge every Telescope release |
+| `farmani/telescope-mongodb` | Full fork | up to 11 | Same fork rebase burden |
+| `yektadg/laravel-telescope-mongodb` | Full fork (jenssegers/mongodb era) | up to 9 | Stale since early 2024 |
+
+In practice, that means three things if you pick this package:
+
+- **You stay on the Telescope your team already knows.** Same Vue dashboard, same watchers, same authorization gate. Only the storage layer changes.
+- **Security and feature updates flow through Composer.** When `laravel/telescope` ships a fix, `composer update` brings it to you — there is no rebase queue waiting on a maintainer to merge.
+- **The diff a security reviewer has to read is small.** All MongoDB-specific behaviour lives in `src/Storage/MongoDbEntriesRepository.php` and four artisan commands — under 1,000 lines total.
+
 ## Requirements
 
-| Component                       | Version           |
-| ------------------------------- | ----------------- |
-| PHP                             | 8.3+              |
-| Laravel                         | 11.x or 12.x      |
-| Telescope                       | 5.x               |
-| MongoDB server                  | 6.0+              |
-| `mongodb/laravel-mongodb`       | 5.x               |
-| `ext-mongodb`                   | 1.18+ or 2.x      |
+| Component                       | Version              |
+| ------------------------------- | -------------------- |
+| PHP                             | 8.3+                 |
+| Laravel                         | 11.x / 12.x / 13.x   |
+| Telescope                       | 5.x                  |
+| MongoDB server                  | 6.0+                 |
+| `mongodb/laravel-mongodb`       | 5.x                  |
+| `ext-mongodb`                   | 1.18+ or 2.x         |
 
 ## Installation
 
@@ -144,6 +161,78 @@ Pruning is chunked (see `chunk.prune` in config) so it stays gentle on the worki
 ## Pagination
 
 Telescope's `before` cursor is the entry sequence. Since MongoDB has no auto-increment, this driver returns the `ObjectId` as the `id` and `sequence` fields. ObjectIds are monotonic, so the existing Telescope UI pagination works without changes.
+
+## Production checklist
+
+The defaults are safe but conservative — review these knobs before you run this in front of real traffic.
+
+### Lock down the dashboard
+
+Telescope's `TelescopeServiceProvider` ships with a `gate()` method that whitelists which users can open `/telescope` outside `local`. The driver does not change that — make sure the published provider is updated:
+
+```php
+// app/Providers/TelescopeServiceProvider.php
+protected function gate(): void
+{
+    Gate::define('viewTelescope', function (User $user) {
+        return in_array($user->email, [
+            'you@yourcompany.com',
+        ]);
+    });
+}
+```
+
+### Pick a retention strategy
+
+You have two options. They are mutually exclusive — pick one.
+
+- **Cron-driven (`telescope:prune`)** — keeps you in control of *when* deletion happens. Schedule it in `app/Console/Kernel.php`:
+  ```php
+  $schedule->command('telescope:prune --hours=48 --keep-exceptions')->hourly();
+  ```
+- **Server-driven (TTL index)** — MongoDB removes documents automatically as they age past the configured TTL. No cron, no cold paths. Set it once and the `sync-indexes` command will install the TTL index:
+  ```bash
+  TELESCOPE_MONGODB_TTL_SECONDS=172800   # 48 hours
+  php artisan telescope-mongodb:sync-indexes
+  ```
+  TTL is the right default for most teams — it removes a class of failure (cron never ran) and amortises deletion cost continuously instead of in large nightly bursts.
+
+### Choose a write concern that matches your deployment
+
+The `write_concern` config maps directly to MongoDB's [write concern](https://www.mongodb.com/docs/manual/reference/write-concern/). Recommended values:
+
+| Deployment            | `w`        | `journal` | Why                                                       |
+| --------------------- | ---------- | --------- | --------------------------------------------------------- |
+| Single-node (dev)     | `1`        | `false`   | Default. Lowest latency, single-server durability.        |
+| Replica set           | `majority` | `true`    | Survives a single-node failure mid-write.                 |
+| High-volume tracing   | `0`        | `false`   | Fire-and-forget. Accept occasional loss for low latency.  |
+| Atlas Serverless / M0 | `majority` | `false`   | Atlas enforces majority anyway; journal is implicit.      |
+
+Configured via env:
+
+```env
+TELESCOPE_MONGODB_WRITE_W=majority
+TELESCOPE_MONGODB_WRITE_JOURNAL=true
+TELESCOPE_MONGODB_WRITE_TIMEOUT_MS=2000
+```
+
+### Verify the install
+
+After every deploy, run the doctor to catch index drift, missing TTL, or a stale Mongo server:
+
+```bash
+php artisan telescope-mongodb:doctor
+```
+
+Exit code is `0` when everything is healthy and `1` if the connection or required indexes are missing.
+
+### Scale: when the collection grows past a few million entries
+
+MongoDB scales the `telescope_entries` collection naturally up to tens of millions of documents on a single node. Beyond that, the typical pattern is:
+
+1. Reduce TTL so the collection stays bounded.
+2. If you need long retention plus high write rate, shard on `{ _id: "hashed" }` — `_id` is monotonic but hashed sharding spreads the writes evenly while still giving you `_id`-based pagination.
+3. Move heavy `content` payloads (views, large request bodies) off the hot path by filtering them in Telescope's `filter` callback before they reach storage.
 
 ## Testing
 
