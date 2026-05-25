@@ -5,10 +5,12 @@ namespace TelescopeMongoDB\Driver\Tests\Feature;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Laravel\Telescope\EntryResult;
 use Laravel\Telescope\EntryType;
 use Laravel\Telescope\EntryUpdate;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Storage\EntryQueryOptions;
+use MongoDB\BSON\UTCDateTime;
 use TelescopeMongoDB\Driver\Storage\MongoDbEntriesRepository;
 use TelescopeMongoDB\Driver\Tests\TestCase;
 
@@ -61,10 +63,10 @@ class MongoDbEntriesRepositoryTest extends TestCase
                 'type' => EntryType::REQUEST,
                 'content' => ['uri' => '/hidden'],
                 'tags' => ['env:prod'],
-                'created_at' => new \MongoDB\BSON\UTCDateTime(),
+                'created_at' => new UTCDateTime,
             ]);
 
-        $options = (new EntryQueryOptions())->tag('env:prod')->limit(50);
+        $options = (new EntryQueryOptions)->tag('env:prod')->limit(50);
 
         $results = $this->repository->get(EntryType::REQUEST, $options);
 
@@ -77,14 +79,14 @@ class MongoDbEntriesRepositoryTest extends TestCase
         $entries = Collection::times(5, fn () => $this->makeEntry(EntryType::REQUEST, ['n' => 1]));
         $this->repository->store($entries);
 
-        $first = $this->repository->get(EntryType::REQUEST, (new EntryQueryOptions())->limit(2));
+        $first = $this->repository->get(EntryType::REQUEST, (new EntryQueryOptions)->limit(2));
         $this->assertCount(2, $first);
 
         $cursor = $first->last()->sequence;
 
         $next = $this->repository->get(
             EntryType::REQUEST,
-            (new EntryQueryOptions())->beforeSequence($cursor)->limit(2),
+            (new EntryQueryOptions)->beforeSequence($cursor)->limit(2),
         );
 
         $this->assertCount(2, $next);
@@ -99,7 +101,7 @@ class MongoDbEntriesRepositoryTest extends TestCase
         $this->repository->store(Collection::make([$first]));
         $this->repository->store(Collection::make([$second]));
 
-        $listing = $this->repository->get(EntryType::EXCEPTION, new EntryQueryOptions());
+        $listing = $this->repository->get(EntryType::EXCEPTION, new EntryQueryOptions);
 
         $this->assertCount(1, $listing);
         $this->assertSame($second->uuid, $listing->first()->id);
@@ -107,7 +109,7 @@ class MongoDbEntriesRepositoryTest extends TestCase
 
         $byFamily = $this->repository->get(
             EntryType::EXCEPTION,
-            (new EntryQueryOptions())->familyHash('fam-1'),
+            (new EntryQueryOptions)->familyHash('fam-1'),
         );
 
         $this->assertCount(2, $byFamily);
@@ -172,7 +174,7 @@ class MongoDbEntriesRepositoryTest extends TestCase
 
         $this->assertSame(1, $deleted);
 
-        $stillThere = $this->repository->get(EntryType::EXCEPTION, new EntryQueryOptions());
+        $stillThere = $this->repository->get(EntryType::EXCEPTION, new EntryQueryOptions);
         $this->assertCount(1, $stillThere);
     }
 
@@ -184,11 +186,11 @@ class MongoDbEntriesRepositoryTest extends TestCase
 
         $this->repository->clear();
 
-        $this->assertCount(0, $this->repository->get(EntryType::REQUEST, new EntryQueryOptions()));
+        $this->assertCount(0, $this->repository->get(EntryType::REQUEST, new EntryQueryOptions));
         $this->assertSame([], $this->repository->monitoring());
     }
 
-    protected function tagsOf(\Laravel\Telescope\EntryResult $result): array
+    protected function tagsOf(EntryResult $result): array
     {
         return $result->jsonSerialize()['tags'] ?? [];
     }

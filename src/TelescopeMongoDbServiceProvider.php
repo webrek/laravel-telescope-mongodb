@@ -7,7 +7,9 @@ use Laravel\Telescope\Contracts\ClearableRepository;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Laravel\Telescope\Contracts\PrunableRepository;
 use Laravel\Telescope\Contracts\TerminableRepository;
+use TelescopeMongoDB\Driver\Console\DoctorCommand;
 use TelescopeMongoDB\Driver\Console\InstallCommand;
+use TelescopeMongoDB\Driver\Console\MigrateFromSqlCommand;
 use TelescopeMongoDB\Driver\Console\SyncIndexesCommand;
 use TelescopeMongoDB\Driver\Storage\MongoDbEntriesRepository;
 
@@ -38,6 +40,8 @@ class TelescopeMongoDbServiceProvider extends ServiceProvider
             $this->commands([
                 InstallCommand::class,
                 SyncIndexesCommand::class,
+                DoctorCommand::class,
+                MigrateFromSqlCommand::class,
             ]);
         }
     }

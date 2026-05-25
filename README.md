@@ -1,5 +1,11 @@
 # Laravel Telescope MongoDB Driver
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/telescope-mongodb/driver.svg?style=flat-square)](https://packagist.org/packages/telescope-mongodb/driver)
+[![Total Downloads](https://img.shields.io/packagist/dt/telescope-mongodb/driver.svg?style=flat-square)](https://packagist.org/packages/telescope-mongodb/driver)
+[![Tests](https://img.shields.io/github/actions/workflow/status/telescope-mongodb/driver/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/telescope-mongodb/driver/actions/workflows/tests.yml)
+[![PHP Version](https://img.shields.io/packagist/php-v/telescope-mongodb/driver.svg?style=flat-square)](https://php.net)
+[![License](https://img.shields.io/packagist/l/telescope-mongodb/driver.svg?style=flat-square)](LICENSE)
+
 A drop-in MongoDB storage driver for [Laravel Telescope](https://laravel.com/docs/telescope). Run Telescope on a MongoDB-only stack without touching MySQL or PostgreSQL.
 
 ## Why

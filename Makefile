@@ -40,6 +40,18 @@ test-unit: ## Run the unit test suite
 test-feature: ## Run the MongoDB-backed feature test suite
 	$(RUN) vendor/bin/phpunit --colors=always --testsuite=Feature
 
+.PHONY: pint
+pint: ## Apply Laravel Pint formatting
+	$(RUN) vendor/bin/pint
+
+.PHONY: pint-check
+pint-check: ## Verify formatting without writing changes
+	$(RUN) vendor/bin/pint --test
+
+.PHONY: stan
+stan: ## Run PHPStan/Larastan static analysis
+	$(RUN) vendor/bin/phpstan analyse --memory-limit=512M
+
 .PHONY: shell
 shell: ## Open an interactive shell in the PHP container
 	$(RUN) bash

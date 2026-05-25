@@ -19,9 +19,11 @@ use Laravel\Telescope\Storage\EntryQueryOptions;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\Collection as MongoCollection;
+use MongoDB\Database;
 use MongoDB\Driver\Exception\InvalidArgumentException as MongoInvalidArgumentException;
+use MongoDB\Driver\WriteConcern;
 
-class MongoDbEntriesRepository implements Contract, ClearableRepository, PrunableRepository, TerminableRepository
+class MongoDbEntriesRepository implements ClearableRepository, Contract, PrunableRepository, TerminableRepository
 {
     protected const ARRAY_TYPE_MAP = [
         'typeMap' => [
@@ -39,8 +41,7 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
         protected string $connection,
         protected string $entriesCollection,
         protected string $monitoringCollection,
-    ) {
-    }
+    ) {}
 
     public function find($id): EntryResult
     {
@@ -50,19 +51,22 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
         );
 
         if ($document === null) {
-            throw (new ModelNotFoundException)->setModel(EntryResult::class, [$id]);
+            throw new ModelNotFoundException(sprintf('No telescope entry found for uuid [%s].', $id));
         }
 
         return $this->toEntryResult($document);
     }
 
+    /**
+     * @return Collection<int, EntryResult>
+     */
     public function get($type, EntryQueryOptions $options)
     {
         $filter = $this->buildFilter($type, $options);
 
         $cursor = $this->entries()->find($filter, array_merge(self::ARRAY_TYPE_MAP, [
             'sort' => ['_id' => -1],
-            'limit' => max(1, (int) ($options->limit ?? 50)),
+            'limit' => max(1, $options->limit),
         ]));
 
         return Collection::make(iterator_to_array($cursor, false))
@@ -70,6 +74,9 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
             ->values();
     }
 
+    /**
+     * @param  Collection<int, IncomingEntry>  $entries
+     */
     public function store(Collection $entries): void
     {
         if ($entries->isEmpty()) {
@@ -88,13 +95,18 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
 
         $standard->chunk($this->chunkSize('store'))->each(function (Collection $chunk): void {
             $this->entries()->insertMany(
-                $chunk->map(fn (IncomingEntry $entry) => $this->toDocument($entry))->values()->all()
+                $chunk->map(fn (IncomingEntry $entry) => $this->toDocument($entry))->values()->all(),
             );
         });
     }
 
+    /**
+     * @param  Collection<int, EntryUpdate>  $updates
+     * @return Collection<int, EntryUpdate>|null
+     */
     public function update(Collection $updates): ?Collection
     {
+        /** @var Collection<int, EntryUpdate> $failed */
         $failed = Collection::make();
 
         foreach ($updates as $update) {
@@ -160,7 +172,7 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
     {
         return Collection::make(iterator_to_array(
             $this->monitoringStore()->find([], self::ARRAY_TYPE_MAP),
-            false
+            false,
         ))->pluck('tag')->values()->all();
     }
 
@@ -208,15 +220,15 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
         $chunkSize = $this->chunkSize('prune');
 
         do {
-            $cursor = $this->entries()->find($filter, [
+            $cursor = $this->entries()->find($filter, array_merge(self::ARRAY_TYPE_MAP, [
                 'projection' => ['_id' => 1],
                 'limit' => $chunkSize,
-            ]);
+            ]));
 
             $ids = [];
 
             foreach ($cursor as $document) {
-                $ids[] = $document->_id;
+                $ids[] = $document['_id'];
             }
 
             if ($ids === []) {
@@ -275,6 +287,9 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
         return $filter;
     }
 
+    /**
+     * @param  Collection<int, IncomingEntry>  $exceptions
+     */
     protected function storeExceptions(Collection $exceptions): void
     {
         if ($exceptions->isEmpty()) {
@@ -312,16 +327,19 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function toDocument(IncomingEntry $entry): array
     {
-        $recordedAt = $entry->recordedAt ?? Carbon::now();
+        $recordedAt = $entry->recordedAt;
 
         if (! $recordedAt instanceof Carbon) {
             $recordedAt = Carbon::parse($recordedAt);
         }
 
         return [
-            '_id' => new ObjectId(),
+            '_id' => new ObjectId,
             'uuid' => (string) $entry->uuid,
             'batch_id' => $entry->batchId,
             'family_hash' => $entry->familyHash(),
@@ -358,15 +376,50 @@ class MongoDbEntriesRepository implements Contract, ClearableRepository, Prunabl
 
     protected function entries(): MongoCollection
     {
-        return $this->mongoDatabase()->selectCollection($this->entriesCollection);
+        return $this->mongoDatabase()->selectCollection(
+            $this->entriesCollection,
+            $this->collectionOptions(),
+        );
     }
 
     protected function monitoringStore(): MongoCollection
     {
-        return $this->mongoDatabase()->selectCollection($this->monitoringCollection);
+        return $this->mongoDatabase()->selectCollection(
+            $this->monitoringCollection,
+            $this->collectionOptions(),
+        );
     }
 
-    protected function mongoDatabase()
+    /**
+     * @return array<string, mixed>
+     */
+    protected function collectionOptions(): array
+    {
+        $writeConcern = $this->writeConcern();
+
+        return $writeConcern === null ? [] : ['writeConcern' => $writeConcern];
+    }
+
+    protected function writeConcern(): ?WriteConcern
+    {
+        $config = config('telescope-mongodb.write_concern');
+
+        if (! is_array($config)) {
+            return null;
+        }
+
+        $w = $config['w'] ?? 1;
+        $timeout = (int) ($config['timeout_ms'] ?? 1000);
+        $journal = (bool) ($config['journal'] ?? false);
+
+        if (is_string($w) && ctype_digit($w)) {
+            $w = (int) $w;
+        }
+
+        return new WriteConcern($w, $timeout, $journal);
+    }
+
+    protected function mongoDatabase(): Database
     {
         $connection = DB::connection($this->connection);
 
