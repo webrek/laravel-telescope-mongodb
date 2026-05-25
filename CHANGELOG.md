@@ -42,4 +42,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cases without a live database.
 - GitHub Actions workflow matrix for PHP 8.3 / 8.4 and Laravel 11 / 12 / 13.
 
-[Unreleased]: https://github.com/telescope-mongodb/driver/compare/HEAD...HEAD
+[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/HEAD...HEAD

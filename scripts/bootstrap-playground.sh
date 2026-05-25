@@ -21,7 +21,7 @@ cd "$PLAYGROUND_DIR"
 
 echo "==> Wiring the local Composer path repository"
 composer config repositories.telescope-mongodb path '../'
-composer require 'telescope-mongodb/driver:@dev'
+composer require 'webrek/laravel-telescope-mongodb:@dev'
 
 echo "==> Patching .env for MongoDB and file-based sessions/cache"
 {

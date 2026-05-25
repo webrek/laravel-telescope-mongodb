@@ -1,10 +1,10 @@
 # Laravel Telescope MongoDB Driver
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/telescope-mongodb/driver.svg?style=flat-square)](https://packagist.org/packages/telescope-mongodb/driver)
-[![Total Downloads](https://img.shields.io/packagist/dt/telescope-mongodb/driver.svg?style=flat-square)](https://packagist.org/packages/telescope-mongodb/driver)
-[![Tests](https://img.shields.io/github/actions/workflow/status/telescope-mongodb/driver/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/telescope-mongodb/driver/actions/workflows/tests.yml)
-[![PHP Version](https://img.shields.io/packagist/php-v/telescope-mongodb/driver.svg?style=flat-square)](https://php.net)
-[![License](https://img.shields.io/packagist/l/telescope-mongodb/driver.svg?style=flat-square)](LICENSE)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/webrek/laravel-telescope-mongodb.svg?style=flat-square)](https://packagist.org/packages/webrek/laravel-telescope-mongodb)
+[![Total Downloads](https://img.shields.io/packagist/dt/webrek/laravel-telescope-mongodb.svg?style=flat-square)](https://packagist.org/packages/webrek/laravel-telescope-mongodb)
+[![Tests](https://img.shields.io/github/actions/workflow/status/webrek/laravel-telescope-mongodb/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/webrek/laravel-telescope-mongodb/actions/workflows/tests.yml)
+[![PHP Version](https://img.shields.io/packagist/php-v/webrek/laravel-telescope-mongodb.svg?style=flat-square)](https://php.net)
+[![License](https://img.shields.io/packagist/l/webrek/laravel-telescope-mongodb.svg?style=flat-square)](LICENSE)
 
 A drop-in MongoDB storage driver for [Laravel Telescope](https://laravel.com/docs/telescope). Run Telescope on a MongoDB-only stack without touching MySQL or PostgreSQL.
 
@@ -28,7 +28,7 @@ This package implements Telescope's `EntriesRepository`, `ClearableRepository`, 
 ## Installation
 
 ```bash
-composer require telescope-mongodb/driver
+composer require webrek/laravel-telescope-mongodb
 ```
 
 Make sure `mongodb/laravel-mongodb` is configured in `config/database.php` with a `mongodb` connection:

@@ -1,5 +1,5 @@
 {
-    "name": "telescope-mongodb/driver",
+    "name": "webrek/laravel-telescope-mongodb",
     "description": "Native MongoDB storage driver for Laravel Telescope.",
     "keywords": [
         "laravel",
