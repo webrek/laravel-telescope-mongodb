@@ -120,20 +120,24 @@ Telescope's `before` cursor is the entry sequence. Since MongoDB has no auto-inc
 
 ## Testing
 
-The package ships with a test suite that runs against a real MongoDB instance. Provide a connection string before running PHPUnit:
+The repository ships with a fully containerised test environment so contributors do not need PHP or MongoDB installed locally. A PHP 8.3 container with `ext-mongodb` and Composer is wired against a `mongo:7` service in `docker-compose.yml`.
+
+```bash
+make build       # build the PHP image once
+make install     # composer install inside the container
+make test        # run the full PHPUnit suite against MongoDB
+make shell       # drop into a bash shell inside the PHP container
+make mongo-shell # open a mongosh shell against the test database
+make clean       # tear everything down
+```
+
+If you prefer to run things on your host, point the suite at any reachable MongoDB instance:
 
 ```bash
 export TELESCOPE_MONGODB_TEST_DSN="mongodb://127.0.0.1:27017"
 export TELESCOPE_MONGODB_TEST_DATABASE="telescope_mongodb_tests"
 
 vendor/bin/phpunit
-```
-
-Or use the included `docker-compose.yml`:
-
-```bash
-docker compose up -d mongo
-TELESCOPE_MONGODB_TEST_DSN="mongodb://127.0.0.1:27017" vendor/bin/phpunit
 ```
 
 ## License
