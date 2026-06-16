@@ -151,11 +151,27 @@ return [
     ],
 
     'indexes' => [
+        // When true, the driver ensures its indexes (including the TTL index)
+        // on the first write of each process, so a fresh deploy is self-healing
+        // even if you forget to run sync-indexes. Set false to manage indexes
+        // exclusively through the artisan commands.
         'auto_create' => (bool) env('TELESCOPE_MONGODB_AUTO_INDEXES', true),
+
+        // Seconds before MongoDB removes an entry automatically (TTL index on
+        // created_at). null disables server-side pruning. See "Pick a retention
+        // strategy" below.
+        'ttl_seconds' => env('TELESCOPE_MONGODB_TTL_SECONDS') !== null
+            ? (int) env('TELESCOPE_MONGODB_TTL_SECONDS')
+            : null,
     ],
 
 ];
 ```
+
+> The value of `config('telescope.driver')` is irrelevant once this package is
+> installed: the service provider binds Telescope's repository contracts to the
+> MongoDB implementation directly, so entries always go to MongoDB regardless of
+> whether `telescope.driver` still says `database`.
 
 ## Document shape
 

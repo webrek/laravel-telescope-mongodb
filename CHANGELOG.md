@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-16
+
+### Added
+- `IndexManager`, a single source of truth for every index definition, shared
+  by the `sync-indexes` command and the repository so the two cannot drift.
+- Lazy index creation: when `indexes.auto_create` is enabled the repository
+  ensures all indexes (including the TTL index) on the first write of each
+  process, so a fresh deploy is self-healing without running `sync-indexes`.
+  The check runs once per process, is guarded, and swallows failures so index
+  maintenance can never break a Telescope write.
+
+### Changed
+- `install` and `doctor` now warn when `indexes.ttl_seconds` is null, and
+  `sync-indexes` reports the disabled state, so a switched-off prune is no
+  longer silent.
+- TTL reconciliation now handles enabling, changing, and disabling the TTL
+  index; previously `sync-indexes` could not turn TTL back off.
+- README documents `auto_create` and `ttl_seconds`, and clarifies that
+  `config('telescope.driver')` is irrelevant once the driver is bound.
+
+### Fixed
+- `indexes.auto_create` was read by nothing: indexes existed only after a
+  manual `sync-indexes`, so deployments relying on the documented default
+  silently had no indexes and no automatic pruning.
+
 ## [1.1.2] - 2026-05-25
 
 ### Changed

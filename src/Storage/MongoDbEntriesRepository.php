@@ -37,6 +37,13 @@ class MongoDbEntriesRepository implements ClearableRepository, Contract, Prunabl
 
     protected bool $monitoredTagsLoaded = false;
 
+    /**
+     * Whether the lazy index check already ran in this process. Static so a
+     * single PHP worker performs the check once across requests rather than on
+     * every write.
+     */
+    protected static bool $indexesEnsured = false;
+
     public function __construct(
         protected string $connection,
         protected string $entriesCollection,
@@ -82,6 +89,8 @@ class MongoDbEntriesRepository implements ClearableRepository, Contract, Prunabl
         if ($entries->isEmpty()) {
             return;
         }
+
+        $this->ensureIndexes();
 
         [$exceptions, $standard] = $entries->partition(fn (IncomingEntry $entry) => $entry->isException());
 
@@ -175,6 +184,8 @@ class MongoDbEntriesRepository implements ClearableRepository, Contract, Prunabl
 
     public function monitor(array $tags): void
     {
+        $this->ensureIndexes();
+
         $existing = $this->monitoring();
 
         $new = array_values(array_diff(array_unique($tags), $existing));
@@ -412,6 +423,54 @@ class MongoDbEntriesRepository implements ClearableRepository, Contract, Prunabl
             $createdAt,
             array_values((array) ($document['tags'] ?? [])),
         );
+    }
+
+    /**
+     * Lazily create the driver's indexes on the first write.
+     *
+     * Runs once per process and only when indexes.auto_create is enabled. Any
+     * failure is swallowed: index maintenance must never break a Telescope
+     * write, and the doctor/sync-indexes commands surface and repair gaps.
+     */
+    protected function ensureIndexes(): void
+    {
+        if (static::$indexesEnsured) {
+            return;
+        }
+
+        // Set the guard before doing any work so a failure does not retry on
+        // every subsequent write within this process.
+        static::$indexesEnsured = true;
+
+        if (! (bool) config('telescope-mongodb.indexes.auto_create', true)) {
+            return;
+        }
+
+        try {
+            IndexManager::ensure(
+                $this->mongoDatabase(),
+                $this->entriesCollection,
+                $this->monitoringCollection,
+                $this->ttlSeconds(),
+            );
+        } catch (\Throwable) {
+            // Intentionally ignored; see method docblock.
+        }
+    }
+
+    protected function ttlSeconds(): ?int
+    {
+        $ttl = config('telescope-mongodb.indexes.ttl_seconds');
+
+        return (is_numeric($ttl) && (int) $ttl > 0) ? (int) $ttl : null;
+    }
+
+    /**
+     * Reset the per-process index guard. Intended for tests.
+     */
+    public static function clearIndexGuard(): void
+    {
+        static::$indexesEnsured = false;
     }
 
     protected function entries(): MongoCollection

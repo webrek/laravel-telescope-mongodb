@@ -151,9 +151,13 @@ class DoctorCommand extends Command
     {
         $ttl = config('telescope-mongodb.indexes.ttl_seconds');
 
-        if (! is_int($ttl) || $ttl <= 0) {
+        if (! is_numeric($ttl) || (int) $ttl <= 0) {
+            $this->components->warn('TTL pruning is disabled (indexes.ttl_seconds is null). Entries are kept until removed manually. Set TELESCOPE_MONGODB_TTL_SECONDS to let MongoDB purge them automatically.');
+
             return;
         }
+
+        $ttl = (int) $ttl;
 
         $entries = $database->selectCollection($entriesName);
         $found = false;

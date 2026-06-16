@@ -37,6 +37,8 @@ class InstallCommand extends Command
         $this->components->info('Done. The MongoDB driver has replaced the default Eloquent storage.');
         $this->line('  Review <fg=cyan>config/telescope-mongodb.php</> to adjust the connection or collection names.');
 
+        $this->suggestTtl();
+
         return self::SUCCESS;
     }
 
@@ -61,6 +63,21 @@ class InstallCommand extends Command
 
         $this->call('telescope:install');
         $this->call('vendor:publish', $params);
+    }
+
+    protected function suggestTtl(): void
+    {
+        $ttl = config('telescope-mongodb.indexes.ttl_seconds');
+
+        if (is_numeric($ttl) && (int) $ttl > 0) {
+            return;
+        }
+
+        $this->newLine();
+        $this->components->warn('Automatic pruning is off. Telescope entries will accumulate until removed manually.');
+        $this->line('  Enable it by adding a retention window (in seconds) to your <fg=cyan>.env</>, for example 7 days:');
+        $this->line('      <fg=cyan>TELESCOPE_MONGODB_TTL_SECONDS=604800</>');
+        $this->line('  Then run <fg=cyan>php artisan telescope-mongodb:sync-indexes</> and MongoDB will purge old entries for you.');
     }
 
     protected function removeSqlMigrations(): void
