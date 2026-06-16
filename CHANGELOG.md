@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-16
+
+### Added
+- Laravel 13 is now exercised by CI (PHP 8.4 and 8.5).
+
+### Changed
+- Allow PHPUnit 12 in the dev toolchain (`phpunit/phpunit` `^10.5 || ^11.0 || ^12.0`).
+
+### Removed
+- Dropped end-of-life Laravel 11 from the CI matrix. It is now affected by
+  security advisories that Composer blocks, so the matrix could no longer
+  install it. The `^11.0` constraint stays in `composer.json` for consumers who
+  disable advisory blocking.
+
 ## [1.2.0] - 2026-06-16
 
 ### Added
@@ -138,7 +152,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cases without a live database.
 - GitHub Actions workflow matrix for PHP 8.3 / 8.4 and Laravel 11 / 12 / 13.
 
-[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/webrek/laravel-telescope-mongodb/compare/v1.0.1...v1.1.0

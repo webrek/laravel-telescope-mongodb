@@ -97,7 +97,7 @@ In practice, that means three things if you pick this package:
 | Component                       | Version              |
 | ------------------------------- | -------------------- |
 | PHP                             | 8.3+                 |
-| Laravel                         | 11.x / 12.x / 13.x   |
+| Laravel                         | 12.x / 13.x          |
 | Telescope                       | 5.x                  |
 | MongoDB server                  | 6.0+                 |
 | `mongodb/laravel-mongodb`       | 5.x                  |
